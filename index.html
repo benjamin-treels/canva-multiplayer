@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Toile Collaborative</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .header {
+            background: white;
+            padding: 15px 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        .header h1 {
+            color: #667eea;
+            font-size: 24px;
+        }
+        
+        .status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 15px;
+            background: #f0f0f0;
+            border-radius: 20px;
+            font-size: 14px;
+        }
+        
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #ccc;
+        }
+        
+        .status-dot.connected {
+            background: #4ade80;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+        
+        .toolbar {
+            background: #f8f9fa;
+            padding: 15px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            border-bottom: 2px solid #e0e0e0;
+            flex-wrap: wrap;
+        }
+        
+        .toolbar-group {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        
+        .toolbar-label {
+            font-size: 14px;
+            color: #666;
+            font-weight: 500;
+        }
+        
+        .color-btn {
+            width: 35px;
+            height: 35px;
+            border-radius: 8px;
+            border: 3px solid transparent;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .color-btn:hover {
+            transform: scale(1.1);
+        }
+        
+        .color-btn.active {
+            border-color: #333;
+            box-shadow: 0 0 0 2px white, 0 0 0 4px #333;
+        }
+        
+        .size-slider {
+            width: 150px;
+            height: 6px;
+            border-radius: 3px;
+            background: #ddd;
+            outline: none;
+            cursor: pointer;
+        }
+        
+        .size-display {
+            min-width: 30px;
+            text-align: center;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .clear-btn {
+            padding: 8px 20px;
+            background: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+        
+        .clear-btn:hover {
+            background: #dc2626;
+        }
+        
+        #canvas {
+            display: block;
+            cursor: crosshair;
+            background: white;
+        }
+        
+        .cursors-layer {
+            position: absolute;
+            pointer-events: none;
+            top: 0;
+            left: 0;
+        }
+        
+        .cursor {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: rgba(255, 100, 100, 0.8);
+            border: 2px solid white;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .canvas-wrapper {
+            position: relative;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🎨 Toile Collaborative</h1>
+        <div class="status">
+            <div class="status-dot" id="statusDot"></div>
+            <span id="statusText">Connexion...</span>
+        </div>
+        <div class="status">
+            <span id="playerCount">0 joueur(s)</span>
+        </div>
+    </div>
+    
+    <div class="container">
+        <div class="toolbar">
+            <div class="toolbar-group">
+                <span class="toolbar-label">Couleur:</span>
+                <button class="color-btn active" style="background: #000000;" data-color="#000000"></button>
+                <button class="color-btn" style="background: #ef4444;" data-color="#ef4444"></button>
+                <button class="color-btn" style="background: #f59e0b;" data-color="#f59e0b"></button>
+                <button class="color-btn" style="background: #10b981;" data-color="#10b981"></button>
+                <button class="color-btn" style="background: #3b82f6;" data-color="#3b82f6"></button>
+                <button class="color-btn" style="background: #8b5cf6;" data-color="#8b5cf6"></button>
+                <button class="color-btn" style="background: #ec4899;" data-color="#ec4899"></button>
+                <button class="color-btn" style="background: #ffffff; border-color: #ddd;" data-color="#ffffff"></button>
+            </div>
+            
+            <div class="toolbar-group">
+                <span class="toolbar-label">Taille:</span>
+                <input type="range" class="size-slider" id="sizeSlider" min="1" max="50" value="3">
+                <span class="size-display" id="sizeDisplay">3</span>
+            </div>
+            
+            <button class="clear-btn" id="clearBtn">🗑️ Effacer</button>
+        </div>
+        
+        <div class="canvas-wrapper">
+            <canvas id="canvas" width="1200" height="800"></canvas>
+            <div class="cursors-layer" id="cursorsLayer"></div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const statusDot = document.getElementById('statusDot');
+        const statusText = document.getElementById('statusText');
+        const playerCount = document.getElementById('playerCount');
+        const sizeSlider = document.getElementById('sizeSlider');
+        const sizeDisplay = document.getElementById('sizeDisplay');
+        const clearBtn = document.getElementById('clearBtn');
+        const cursorsLayer = document.getElementById('cursorsLayer');
+        
+        // Configuration - Remplace par ton URL Render
+        const WS_URL = 'wss://TON-APP.onrender.com'; // Change TON-APP par le nom de ton app
+        
+        let ws = null;
+        let playerId = null;
+        let isDrawing = false;
+        let currentColor = '#000000';
+        let currentSize = 3;
+        let currentStroke = [];
+        let otherCursors = {};
+        
+        // Connexion WebSocket
+        function connect() {
+            ws = new WebSocket(WS_URL);
+            
+            ws.onopen = () => {
+                statusDot.classList.add('connected');
+                statusText.textContent = 'Connecté';
+                console.log('Connecté au serveur');
+            };
+            
+            ws.onclose = () => {
+                statusDot.classList.remove('connected');
+                statusText.textContent = 'Déconnecté';
+                console.log('Déconnecté du serveur');
+                setTimeout(connect, 3000);
+            };
+            
+            ws.onerror = (error) => {
+                console.error('Erreur WebSocket:', error);
+            };
+            
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                handleMessage(data);
+            };
+        }
+        
+        function handleMessage(data) {
+            switch(data.type) {
+                case 'connected':
+                    playerId = data.playerId;
+                    canvas.width = data.canvasWidth;
+                    canvas.height = data.canvasHeight;
+                    break;
+                    
+                case 'history':
+                    // Redessine tous les traits de l'historique
+                    data.strokes.forEach(stroke => {
+                        drawStroke(stroke);
+                    });
+                    break;
+                    
+                case 'draw':
+                    // Un autre joueur dessine
+                    drawStroke(data.stroke);
+                    break;
+                    
+                case 'cursor':
+                    // Mise à jour du curseur d'un autre joueur
+                    updateOtherCursor(data.playerId, data.x, data.y);
+                    break;
+                    
+                case 'player_joined':
+                case 'player_left':
+                    playerCount.textContent = `${data.playerCount} joueur(s)`;
+                    break;
+                    
+                case 'clear':
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    break;
+            }
+        }
+        
+        function drawStroke(stroke) {
+            if (stroke.points.length < 2) return;
+            
+            ctx.strokeStyle = stroke.color;
+            ctx.lineWidth = stroke.size;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            
+            ctx.beginPath();
+            ctx.moveTo(stroke.points[0].x, stroke.points[0].y);
+            
+            for (let i = 1; i < stroke.points.length; i++) {
+                ctx.lineTo(stroke.points[i].x, stroke.points[i].y);
+            }
+            
+            ctx.stroke();
+        }
+        
+        function updateOtherCursor(pid, x, y) {
+            let cursorEl = otherCursors[pid];
+            
+            if (!cursorEl) {
+                cursorEl = document.createElement('div');
+                cursorEl.className = 'cursor';
+                cursorsLayer.appendChild(cursorEl);
+                otherCursors[pid] = cursorEl;
+            }
+            
+            cursorEl.style.left = x + 'px';
+            cursorEl.style.top = y + 'px';
+        }
+        
+        // Gestion du dessin
+        canvas.addEventListener('mousedown', (e) => {
+            isDrawing = true;
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            currentStroke = [{x, y}];
+        });
+        
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            // Envoie la position du curseur
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    type: 'cursor',
+                    x: x,
+                    y: y
+                }));
+            }
+            
+            if (isDrawing) {
+                currentStroke.push({x, y});
+                
+                // Dessine localement
+                ctx.strokeStyle = currentColor;
+                ctx.lineWidth = currentSize;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                
+                ctx.beginPath();
+                const prev = currentStroke[currentStroke.length - 2];
+                ctx.moveTo(prev.x, prev.y);
+                ctx.lineTo(x, y);
+                ctx.stroke();
+            }
+        });
+        
+        canvas.addEventListener('mouseup', () => {
+            if (isDrawing && currentStroke.length > 0) {
+                // Envoie le trait au serveur
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({
+                        type: 'draw',
+                        points: currentStroke,
+                        color: currentColor,
+                        size: currentSize
+                    }));
+                }
+            }
+            isDrawing = false;
+            currentStroke = [];
+        });
+        
+        canvas.addEventListener('mouseleave', () => {
+            if (isDrawing) {
+                canvas.dispatchEvent(new Event('mouseup'));
+            }
+        });
+        
+        // Gestion des couleurs
+        document.querySelectorAll('.color-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentColor = btn.dataset.color;
+            });
+        });
+        
+        // Gestion de la taille
+        sizeSlider.addEventListener('input', () => {
+            currentSize = parseInt(sizeSlider.value);
+            sizeDisplay.textContent = currentSize;
+        });
+        
+        // Bouton effacer
+        clearBtn.addEventListener('click', () => {
+            if (confirm('Effacer toute la toile ? Cette action affectera tous les joueurs.')) {
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({type: 'clear'}));
+                }
+            }
+        });
+        
+        // Connexion initiale
+        connect();
+    </script>
+</body>
+</html>
