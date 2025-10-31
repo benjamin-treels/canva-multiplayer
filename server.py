@@ -7,7 +7,7 @@ from datetime import datetime
 # Configuration
 CANVAS_WIDTH = 1200
 CANVAS_HEIGHT = 800
-PORT = '8080'
+PORT = 8080
 HOST = ''
 
 class CollaborativeCanvas:
